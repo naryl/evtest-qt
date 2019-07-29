@@ -35,7 +35,9 @@ void print_help()
             << "   -h, --help      Print help\n";
 }
 
+#ifndef EVTEST_QT_VERSION
 #define EVTEST_QT_VERSION "0e54ae0"
+#endif
 
 int main(int argc, char** argv)
 {
