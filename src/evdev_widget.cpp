@@ -146,4 +146,27 @@ EvdevWidget::~EvdevWidget()
 {
 }
 
+bool EvdevWidget::all_tested()
+{
+  for(int idx = 0; idx < m_axis_layout.count(); idx++)
+  {
+    QLayoutItem * const item = m_axis_layout.itemAt(idx);
+    if(dynamic_cast<QWidgetItem *>(item)) {
+      auto axis = qobject_cast<AxisWidget *>(item->widget());
+      if (axis && !axis->is_tested())
+        return false;
+    }
+  }
+  for(int idx = 0; idx < m_button_layout.count(); idx++)
+  {
+    QLayoutItem * const item = m_button_layout.itemAt(idx);
+    if(dynamic_cast<QWidgetItem *>(item)) {
+      auto btn = qobject_cast<ButtonWidget *>(item->widget());
+      if (!btn->is_tested())
+        return false;
+    }
+  }
+  return true;
+}
+
 /* EOF */

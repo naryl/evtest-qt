@@ -53,7 +53,6 @@ private:
   QWidget m_widget;
 
   QVBoxLayout m_vbox_layout;
-  QComboBox m_evdev_list_box;
 
   std::unique_ptr<QWidget> m_ev_widget;
 
@@ -61,18 +60,28 @@ private:
   std::unique_ptr<EvdevState> m_state;
   std::unique_ptr<QSocketNotifier> m_notifier;
 
+  std::vector<std::string> m_devices;
+  bool m_tested;
+  bool m_initialized_devices;
+
 public:
   EvtestApp();
 
-  void refresh_device_list();
   void select_device(const QString& device);
+
+  void display_message(QString message);
 
 private:
   void on_data(EvdevDevice& device, EvdevState& state);
   void on_device_change(const std::string& filename);
 
+  void on_added_device(const QString& device);
+  void on_removed_device(const QString& device);
+
+  EvdevInfo device_info(QString device);
+
 public slots:
-  void on_item_change(int index);
+  void refresh_device_list();
   void on_shrink_action();
   void on_notification(int);
 

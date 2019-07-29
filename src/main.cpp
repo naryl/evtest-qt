@@ -15,7 +15,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <iostream>
+#include <vector>
+#include <string.h>
 
+#include <QString>
+#include <QApplication>
 #include <QIcon>
 
 #include "evtest_app.hpp"
@@ -30,6 +34,8 @@ void print_help()
             << "   -v, --version   Print version number\n"
             << "   -h, --help      Print help\n";
 }
+
+#define EVTEST_QT_VERSION "0e54ae0"
 
 int main(int argc, char** argv)
 {

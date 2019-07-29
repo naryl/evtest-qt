@@ -28,12 +28,15 @@ class ButtonWidget : public QWidget
 private:
   uint16_t m_code;
   int32_t m_value;
+  bool m_tested;
 
 public:
   ButtonWidget(uint16_t code, QWidget* parent = 0);
   virtual ~ButtonWidget();
 
   QSize sizeHint() const  override { return QSize(32, 16); };
+
+  bool is_tested() const;
 
 public slots:
   void on_change(const EvdevState& state);

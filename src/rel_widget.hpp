@@ -31,10 +31,10 @@ private:
   int m_offset_x;
 
 public:
-  RelWidget(uint16_t code, QWidget* parent=0);
-  virtual ~RelWidget();
+  RelWidget(uint16_t code, QWidget* parent=nullptr);
+  virtual ~RelWidget() override;
 
-  QSize sizeHint() const  override { return QSize(128, 16); };
+  QSize sizeHint() const  override { return QSize(128, 16); }
 
 public slots:
   void on_change(const EvdevState& state);

@@ -67,6 +67,8 @@ public:
   EvdevWidget(const EvdevState& state, const EvdevInfo& info, QWidget* parent=0);
   virtual ~EvdevWidget();
 
+  bool all_tested();
+
 private:
   EvdevWidget(const EvdevWidget&) = delete;
   EvdevWidget& operator=(const EvdevWidget&) = delete;

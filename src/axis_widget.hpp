@@ -32,12 +32,16 @@ private:
   int m_min;
   int m_max;
   int m_value;
+  bool m_saw_min;
+  bool m_saw_max;
 
 public:
   AxisWidget(uint16_t code, int min, int max, QWidget* parent=0);
   virtual ~AxisWidget();
 
   QSize sizeHint() const  override { return QSize(128, 16); };
+
+  bool is_tested() const;
 
 public slots:
   void set_axis_pos(int v);

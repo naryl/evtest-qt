@@ -17,16 +17,24 @@
 #include "axis_widget.hpp"
 
 #include <QPainter>
+#include <iostream>
 
 #include "evdev_enum.hpp"
 #include "evdev_state.hpp"
+
+bool AxisWidget::is_tested() const
+{
+    return m_saw_min && m_saw_max;
+}
 
 AxisWidget::AxisWidget(uint16_t code, int min, int max, QWidget* parent_) :
   QWidget(parent_),
   m_code(code),
   m_min(min),
   m_max(max),
-  m_value(0)
+  m_value(0),
+  m_saw_min(false),
+  m_saw_max(false)
 {
   setToolTip(QString::fromStdString(evdev_abs_name(m_code)));
 }
@@ -49,6 +57,12 @@ AxisWidget::on_change(const EvdevState& state)
   m_value = state.get_abs_value(m_code);
   if (old_value != m_value)
   {
+    if (m_value <= m_min) {
+      m_saw_min = true;
+    }
+    if (m_value >= m_max) {
+      m_saw_max = true;
+    }
     update();
   }
 }
@@ -67,17 +81,17 @@ AxisWidget::paintEvent(QPaintEvent* ev)
     zero_pos = width() * (0 - m_min) / (m_max - m_min);
   }
 
-  // blue rect
-  painter.setPen(Qt::NoPen);
-  int l = std::min(value_pos, zero_pos);
-  int r = std::max(value_pos, zero_pos);
-  painter.fillRect(l, 0, r - l, height(), QColor(192, 192, 255));
-
-  if (false)
-  {
-    // zero line
-    painter.setPen(QColor(128, 128, 128));
-    painter.drawLine(zero_pos, 0, zero_pos, height());
+  if (is_tested()) {
+    // red rect
+    painter.setPen(Qt::NoPen);
+    painter.fillRect(0, 0, width(), height(), QColor(0, 255, 0));
+  }
+  else {
+    // blue rect
+    painter.setPen(Qt::NoPen);
+    int l = std::min(value_pos, zero_pos);
+    int r = std::max(value_pos, zero_pos);
+    painter.fillRect(l, 0, r - l, height(), QColor(192, 192, 255));
   }
 
   // value line

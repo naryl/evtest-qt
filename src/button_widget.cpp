@@ -21,10 +21,16 @@
 #include "evdev_enum.hpp"
 #include "evdev_state.hpp"
 
+bool ButtonWidget::is_tested() const
+{
+    return m_tested;
+}
+
 ButtonWidget::ButtonWidget(uint16_t code, QWidget* parent_) :
   QWidget(parent_),
   m_code(code),
-  m_value(0)
+  m_value(0),
+  m_tested(false)
 {
   setToolTip(QString::fromStdString(evdev_key_name(m_code)));
 }
@@ -38,6 +44,11 @@ ButtonWidget::on_change(const EvdevState& state)
 {
   int old_value = m_value;
   m_value = state.get_key_value(m_code);
+
+  // Releasing a button
+  if (old_value != 0 && m_value == 0)
+      m_tested = true;
+
   if (old_value != m_value)
   {
     update();
@@ -52,23 +63,28 @@ ButtonWidget::paintEvent(QPaintEvent* ev)
 
   switch(m_value)
   {
-    case 0: // key up
-      break;
-
-    case 1: // key down
+  case 0: // key up
+    if (m_tested) {
       painter.setPen(Qt::NoPen);
-      painter.fillRect(0, 0, width(), height(), QColor(255, 0, 0));
-      break;
+      painter.fillRect(0, 0, width(), height(), QColor(0, 255, 0));
+    }
 
-    case 2: // key repeat
-      painter.setPen(Qt::NoPen);
-      painter.fillRect(0, 0, width(), height(), QColor(255, 0, 255));
-      break;
+    break;
 
-    default: // unknown
-      painter.setPen(Qt::NoPen);
-      painter.fillRect(0, 0, width(), height(), QColor(255, 255, 0));
-      break;
+  case 1: // key down
+    painter.setPen(Qt::NoPen);
+    painter.fillRect(0, 0, width(), height(), QColor(255, 0, 0));
+    break;
+
+  case 2: // key repeat
+    painter.setPen(Qt::NoPen);
+    painter.fillRect(0, 0, width(), height(), QColor(255, 0, 255));
+    break;
+
+  default: // unknown
+    painter.setPen(Qt::NoPen);
+    painter.fillRect(0, 0, width(), height(), QColor(255, 255, 0));
+    break;
   }
 
   painter.setPen(QColor(0, 0, 0));

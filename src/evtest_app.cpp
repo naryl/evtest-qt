@@ -17,49 +17,64 @@
 #include "evtest_app.hpp"
 
 #include <QTimer>
+#include <iostream>
 
 #include "util.hpp"
 #include "evdev_widget.hpp"
+
+void EvtestApp::display_message(QString message)
+{
+    QFont font("Arial", 16, QFont::Bold);
+    m_ev_widget = util::make_unique<QLabel>(message);
+    QLabel* label = static_cast<QLabel*>(m_ev_widget.get());
+    label->setAlignment(Qt::AlignCenter | Qt::AlignVCenter);
+    label->setFont(font);
+    m_vbox_layout.addWidget(m_ev_widget.get());
+}
 
 EvtestApp::EvtestApp() :
   m_window(),
   m_widget(),
   m_vbox_layout(&m_widget),
-  m_evdev_list_box(),
   m_ev_widget(),
   m_device(),
   m_state(),
-  m_notifier()
+  m_notifier(),
+  m_tested(false),
+  m_initialized_devices(false)
 {
   //m_widget.setMinimumSize(400, 300);
   m_window.setCentralWidget(&m_widget);
 
-  m_vbox_layout.addWidget(&m_evdev_list_box);
+  display_message("Please, plug in the device.");
 
-  m_ev_widget = util::make_unique<QLabel>("nothing selected");
-  static_cast<QLabel*>(m_ev_widget.get())->setAlignment(Qt::AlignCenter | Qt::AlignVCenter);
-  m_vbox_layout.addWidget(m_ev_widget.get());
-
-  QObject::connect(&m_evdev_list_box, SIGNAL(activated(int)),
-                   this, SLOT(on_item_change(int)));
+  QTimer *timer = new QTimer(this);
+  connect(timer, SIGNAL(timeout()), this, SLOT(refresh_device_list()));
+  timer->start(1000);
 
   m_window.show();
+}
+
+
+
+EvdevInfo EvtestApp::device_info(QString device)
+{
+    auto dev_fp = EvdevDevice::open(device.toStdString());
+    return dev_fp->read_evdev_info();
 }
 
 void
 EvtestApp::refresh_device_list()
 {
-  m_evdev_list_box.clear();
-  for(auto dev : EvdevList::scan("/dev/input"))
+  std::vector<std::string> new_devices = EvdevList::scan("/dev/input");
+  for(auto dev : new_devices)
   {
     try
     {
-      auto dev_fp = EvdevDevice::open(dev);
-      auto info = dev_fp->read_evdev_info();
+      EvdevInfo info = device_info(QString::fromStdString(dev));
 
       std::ostringstream str;
       str << dev.substr(11) << ": " << info.name;
-      m_evdev_list_box.addItem(str.str().c_str(), QString::fromStdString(dev));
     }
     catch(const std::exception& err)
     {
@@ -67,28 +82,40 @@ EvtestApp::refresh_device_list()
 
       std::ostringstream str;
       str << dev.substr(11) << ": " << "[error: " << err.what() << "]";
-      m_evdev_list_box.addItem(str.str().c_str(), QString::fromStdString(dev));
     }
+    QCoreApplication::processEvents();
   }
+
+  if (!m_initialized_devices) {
+    m_devices = new_devices;
+    m_initialized_devices = true;
+    return;
+  }
+
+  std::vector<std::string> added_devices, removed_devices;
+  std::set_difference(new_devices.begin(), new_devices.end(), m_devices.begin(), m_devices.end(),
+          std::inserter(added_devices, added_devices.begin()));
+  std::set_difference(m_devices.begin(), m_devices.end(), new_devices.begin(), new_devices.end(),
+          std::inserter(removed_devices, removed_devices.begin()));
+  m_devices = new_devices;
+  for (auto dev : added_devices)
+      on_added_device(QString::fromStdString(dev));
+  for (auto dev : removed_devices)
+      on_removed_device(QString::fromStdString(dev));
 }
 
 void
 EvtestApp::select_device(const QString& device)
 {
+  m_tested = false;
   on_device_change(device.toStdString());
-}
-
-void
-EvtestApp::on_item_change(int index)
-{
-  std::string dev = m_evdev_list_box.itemData(index).toString().toUtf8().data();
-  std::cout << "activated: " << dev << std::endl;
-  on_device_change(dev);
 }
 
 void
 EvtestApp::on_data(EvdevDevice& device, EvdevState& state)
 {
+  if (m_tested)
+      return;
   std::array<struct input_event, 128> ev;
   while(true)
   {
@@ -100,6 +127,11 @@ EvtestApp::on_data(EvdevDevice& device, EvdevState& state)
     }
     else if (num_events == 0)
     {
+      EvdevWidget *evdev = qobject_cast<EvdevWidget *>(m_ev_widget.get());
+      if (evdev && evdev->all_tested()) {
+        display_message("PASS\nPlease unplug the device.");
+        m_tested = true;
+      }
       return;
     }
     else
@@ -129,7 +161,6 @@ EvtestApp::on_device_change(const std::string& filename)
 {
   m_notifier.reset();
   m_state.reset();
-  //m_vbox_layout.removeWidget(m_ev_widget.get());
   m_ev_widget.reset();
 
   try
@@ -155,6 +186,19 @@ EvtestApp::on_device_change(const std::string& filename)
     m_ev_widget = util::make_unique<QLabel>(err.what());
     m_vbox_layout.addWidget(m_ev_widget.get());
   }
+}
+
+void EvtestApp::on_added_device(const QString &device)
+{
+  std::cout << "Added device:" << device.toStdString() << std::endl;
+  select_device(device);
+}
+
+void EvtestApp::on_removed_device(const QString &device)
+{
+  std::cout << "Removed device:" << device.toStdString() << std::endl;
+  display_message("Please, plug in the device.");
+
 }
 
 /* EOF */
